@@ -16,6 +16,14 @@ const LinkHoverOverlay = dynamic(
 const SyncButton = dynamic(() => import("@/components/SyncButton"), {
   ssr: false,
 });
+const VideoStorageMigration = dynamic(
+  () => import("@/components/VideoStorageMigration"),
+  { ssr: false }
+);
+const DownloadVideosButton = dynamic(
+  () => import("@/components/DownloadVideosButton"),
+  { ssr: false }
+);
 
 export default function Page() {
   return (
@@ -39,6 +47,7 @@ export default function Page() {
           <span className="hidden rounded-full bg-duo-yellow/20 px-3 py-1 font-extrabold uppercase text-duo-yellow sm:inline">
             Prototype
           </span>
+          <DownloadVideosButton />
           <SyncButton />
         </div>
       </header>
@@ -54,6 +63,7 @@ export default function Page() {
 
       <NodeModal />
       <LinkHoverOverlay />
+      <VideoStorageMigration />
     </main>
     </LinkDragProvider>
   );

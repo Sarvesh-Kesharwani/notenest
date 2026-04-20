@@ -224,7 +224,8 @@ function GraphInner() {
         onNodeClick={(_e, n) => selectNode(n.id)}
         onPaneClick={() => selectNode(null)}
         fitView
-        fitViewOptions={{ padding: 0.3 }}
+        fitViewOptions={{ padding: 0.8, maxZoom: 0.75 }}
+        minZoom={0.2}
         proOptions={{ hideAttribution: true }}
         panOnScroll
         zoomOnScroll={false}

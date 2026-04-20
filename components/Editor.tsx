@@ -8,6 +8,58 @@ import { useNotesStore } from "@/lib/store";
 import { useLinkDrag } from "./LinkDragProvider";
 import RichEditor from "./RichEditor";
 
+/**
+ * Apply the `nodeLink` mark across [from, to], splitting the range so the
+ * mark is only set on ranges where the schema permits it. Robust to
+ * - positions that changed since the drag started (clamped to doc size)
+ * - nodes that don't allow the mark (skipped silently)
+ * - selections that span code blocks (the mark IS allowed there via
+ *   `marks: "nodeLink"` on CodeBlockWithWrap, but this also guards stale
+ *   positions that fall outside the doc).
+ */
+function applyNodeLinkSafe(
+  editor: TiptapEditor,
+  from: number,
+  to: number,
+  nodeId: string
+) {
+  try {
+    const doc = editor.state.doc;
+    const size = doc.content.size;
+    const f = Math.max(0, Math.min(from, size));
+    const t = Math.max(f, Math.min(to, size));
+    if (f === t) return;
+
+    const markType = editor.schema.marks.nodeLink;
+    if (!markType) return;
+
+    const { tr } = editor.state;
+    let applied = false;
+    doc.nodesBetween(f, t, (node, pos) => {
+      if (!node.isInline && node.type.name !== "text") {
+        // descend into block nodes; only apply on inline/text ranges
+        return true;
+      }
+      const nodeFrom = Math.max(pos, f);
+      const nodeTo = Math.min(pos + node.nodeSize, t);
+      if (nodeFrom >= nodeTo) return false;
+      // Skip ranges inside parents that disallow this mark.
+      const $from = doc.resolve(nodeFrom);
+      const parent = $from.parent;
+      if (!parent.type.allowsMarkType(markType)) return false;
+      tr.addMark(nodeFrom, nodeTo, markType.create({ nodeId }));
+      applied = true;
+      return false;
+    });
+    if (applied) {
+      editor.view.dispatch(tr);
+    }
+  } catch (err) {
+    // swallow — linking should never crash the editor
+    console.warn("[nodeLink] applyLink failed", err);
+  }
+}
+
 export default function Editor() {
   const editorHTML = useNotesStore((s) => s.editorHTML);
   const setEditorHTML = useNotesStore((s) => s.setEditorHTML);
@@ -63,14 +115,7 @@ export default function Editor() {
 
       linkDrag.start(origin, {
         selectionText,
-        applyLink: (nodeId: string) => {
-          editor
-            .chain()
-            .focus()
-            .setTextSelection({ from, to })
-            .setMark("nodeLink", { nodeId })
-            .run();
-        },
+        applyLink: (nodeId: string) => applyNodeLinkSafe(editor, from, to, nodeId),
       });
     },
     [editor, linkDrag]
@@ -180,14 +225,8 @@ export default function Editor() {
                 },
                 {
                   selectionText,
-                  applyLink: (nodeId: string) => {
-                    ed
-                      .chain()
-                      .focus()
-                      .setTextSelection({ from, to })
-                      .setMark("nodeLink", { nodeId })
-                      .run();
-                  },
+                  applyLink: (nodeId: string) =>
+                    applyNodeLinkSafe(ed, from, to, nodeId),
                 }
               );
             }}

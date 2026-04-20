@@ -11,6 +11,8 @@ declare module "@tiptap/core" {
 }
 
 export const CodeBlockWithWrap = CodeBlock.extend({
+  marks: "nodeLink",
+
   addAttributes() {
     return {
       ...this.parent?.(),

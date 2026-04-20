@@ -85,6 +85,7 @@ export default function RichEditor({
   onEditorReady,
 }: RichEditorProps) {
   const lastExternal = useRef(value);
+  const pendingExternalSync = useRef(0);
 
   const editor = useEditor({
     extensions: [
@@ -140,10 +141,22 @@ export default function RichEditor({
 
   useEffect(() => {
     if (!editor) return;
-    if (value !== lastExternal.current && value !== editor.getHTML()) {
+
+    if (value === lastExternal.current || value === editor.getHTML()) return;
+
+    const syncId = ++pendingExternalSync.current;
+
+    queueMicrotask(() => {
+      if (pendingExternalSync.current !== syncId || editor.isDestroyed) return;
+      if (value === lastExternal.current || value === editor.getHTML()) return;
+
       editor.commands.setContent(value, false);
       lastExternal.current = value;
-    }
+    });
+
+    return () => {
+      pendingExternalSync.current++;
+    };
   }, [value, editor]);
 
   useEffect(() => {

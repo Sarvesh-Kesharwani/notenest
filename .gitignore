@@ -30,6 +30,7 @@ yarn-error.log*
 
 # vercel
 .vercel
+vercel-project.json
 
 # typescript
 *.tsbuildinfo
@@ -38,3 +39,9 @@ next-env.d.ts
 # editor
 .idea
 .vscode
+
+.vercel
+
+# local app storage
+/storage/videos/*
+!/storage/videos/.gitkeep
