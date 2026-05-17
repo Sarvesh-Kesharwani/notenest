@@ -2,62 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Editor as TiptapEditor } from "@tiptap/react";
-import { Link2Off, Unplug } from "lucide-react";
+import { Braces, Link2Off, Plus } from "lucide-react";
 import { NodeLinkMark } from "@/lib/node-link-mark";
+import { useFilesStore } from "@/lib/files-store";
 import { useNotesStore } from "@/lib/store";
-import { useLinkDrag } from "./LinkDragProvider";
+import { tryFormatJson } from "@/lib/json-highlight";
 import RichEditor from "./RichEditor";
 
-/**
- * Apply the `nodeLink` mark across [from, to], splitting the range so the
- * mark is only set on ranges where the schema permits it. Robust to
- * - positions that changed since the drag started (clamped to doc size)
- * - nodes that don't allow the mark (skipped silently)
- * - selections that span code blocks (the mark IS allowed there via
- *   `marks: "nodeLink"` on CodeBlockWithWrap, but this also guards stale
- *   positions that fall outside the doc).
- */
-function applyNodeLinkSafe(
-  editor: TiptapEditor,
-  from: number,
-  to: number,
-  nodeId: string
-) {
-  try {
-    const doc = editor.state.doc;
-    const size = doc.content.size;
-    const f = Math.max(0, Math.min(from, size));
-    const t = Math.max(f, Math.min(to, size));
-    if (f === t) return;
-
-    const markType = editor.schema.marks.nodeLink;
-    if (!markType) return;
-
-    const { tr } = editor.state;
-    let applied = false;
-    doc.nodesBetween(f, t, (node, pos) => {
-      if (!node.isInline && node.type.name !== "text") {
-        // descend into block nodes; only apply on inline/text ranges
-        return true;
-      }
-      const nodeFrom = Math.max(pos, f);
-      const nodeTo = Math.min(pos + node.nodeSize, t);
-      if (nodeFrom >= nodeTo) return false;
-      // Skip ranges inside parents that disallow this mark.
-      const $from = doc.resolve(nodeFrom);
-      const parent = $from.parent;
-      if (!parent.type.allowsMarkType(markType)) return false;
-      tr.addMark(nodeFrom, nodeTo, markType.create({ nodeId }));
-      applied = true;
-      return false;
-    });
-    if (applied) {
-      editor.view.dispatch(tr);
-    }
-  } catch (err) {
-    // swallow — linking should never crash the editor
-    console.warn("[nodeLink] applyLink failed", err);
-  }
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 export default function Editor() {
@@ -65,9 +21,41 @@ export default function Editor() {
   const setEditorHTML = useNotesStore((s) => s.setEditorHTML);
   const setHoveredLinkNode = useNotesStore((s) => s.setHoveredLinkNode);
   const focusNodeInGraph = useNotesStore((s) => s.focusNodeInGraph);
+  const addNode = useNotesStore((s) => s.addNode);
+  const selectNode = useNotesStore((s) => s.selectNode);
 
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
-  const linkDrag = useLinkDrag();
+
+  const addSelectionAsNode = useCallback(
+    (ed: TiptapEditor) => {
+      const { from, to } = ed.state.selection;
+      if (from === to) return;
+      const raw = ed.state.doc.textBetween(from, to, "\n");
+      if (!raw.trim()) return;
+
+      const pretty = tryFormatJson(raw);
+      const stored = pretty ?? raw;
+
+      const titleLine =
+        (pretty
+          ? pretty.split(/\n/).find((l) => l.trim()) ?? ""
+          : raw.split(/\n/)[0] ?? "")
+          .trim()
+          .replace(/[{}[\],]/g, " ")
+          .replace(/\s+/g, " ")
+          .slice(0, 60) || (pretty ? "JSON snippet" : "Snippet");
+
+      const n = addNode({
+        title: titleLine,
+        rawText: stored,
+        text: `<pre><code class="language-json">${escapeHtml(stored)}</code></pre>`,
+        contentType: "text",
+      });
+      selectNode(n.id);
+      focusNodeInGraph(n.id);
+    },
+    [addNode, selectNode, focusNodeInGraph]
+  );
 
   useEffect(() => {
     if (!editor) return;
@@ -98,29 +86,6 @@ export default function Editor() {
     };
   }, [editor, setHoveredLinkNode]);
 
-  const startDragFromSocket = useCallback(
-    (e: React.PointerEvent<HTMLButtonElement>) => {
-      if (!editor) return;
-      const { from, to } = editor.state.selection;
-      if (from === to) return;
-      e.preventDefault();
-      e.stopPropagation();
-
-      const selectionText = editor.state.doc.textBetween(from, to, " ");
-      const rect = e.currentTarget.getBoundingClientRect();
-      const origin = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      };
-
-      linkDrag.start(origin, {
-        selectionText,
-        applyLink: (nodeId: string) => applyNodeLinkSafe(editor, from, to, nodeId),
-      });
-    },
-    [editor, linkDrag]
-  );
-
   const unlinkNode = useCallback(() => {
     if (!editor) return;
     editor
@@ -131,10 +96,8 @@ export default function Editor() {
       .run();
   }, [editor]);
 
-  const hasSelection = editor
-    ? editor.state.selection.from !== editor.state.selection.to
-    : false;
   const isLinked = editor?.isActive("nodeLink") ?? false;
+  const openedPath = useFilesStore((s) => s.openedPath);
 
   return (
     <RichEditor
@@ -143,6 +106,8 @@ export default function Editor() {
       placeholder="Write your page… select any text and drag the cord to a node →"
       extraExtensions={[NodeLinkMark as never]}
       variant="page"
+      jsonBlocksOnly
+      scrollKey={openedPath ?? "scratch"}
       onEditorReady={setEditor}
       editorProps={{
         handleClickOn(_view, pos, _node, _nPos, event) {
@@ -177,66 +142,50 @@ export default function Editor() {
           >
             <Link2Off size={14} /> Unlink
           </button>
-        ) : (
+        ) : null
+      }
+      bubbleRightSlot={(ed) => {
+        if (ed.isActive("nodeLink")) {
+          return (
+            <button
+              onClick={() =>
+                ed
+                  .chain()
+                  .focus()
+                  .extendMarkRange("nodeLink")
+                  .unsetMark("nodeLink")
+                  .run()
+              }
+              className="ml-1 flex items-center gap-1 rounded-lg bg-duo-red/10 px-2 py-1 text-[10px] font-extrabold uppercase text-duo-red hover:bg-duo-red/20"
+            >
+              <Link2Off size={12} /> Unlink
+            </button>
+          );
+        }
+
+        const { from, to } = ed.state.selection;
+        if (from === to) return null;
+        const raw = ed.state.doc.textBetween(from, to, "\n");
+        if (!raw.trim()) return null;
+        const isJson = tryFormatJson(raw) !== null;
+
+        return (
           <button
-            onPointerDown={startDragFromSocket}
-            disabled={!hasSelection}
+            onClick={() => addSelectionAsNode(ed)}
             title={
-              hasSelection
-                ? "Drag onto a node to link"
-                : "Select some text first"
+              isJson
+                ? "Add as JSON node (color-coded)"
+                : "Add selection as node"
             }
-            className="flex items-center gap-1.5 rounded-2xl bg-duo-green px-4 py-2 text-xs font-extrabold uppercase text-white shadow-duoGreen active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:cursor-not-allowed touch-none"
+            className={`ml-1 flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-extrabold uppercase text-white shadow-duoGreen ${
+              isJson ? "bg-duo-blue" : "bg-duo-green"
+            }`}
           >
-            <Unplug size={14} /> Drag to node
+            {isJson ? <Braces size={12} /> : <Plus size={12} />}
+            {isJson ? "JSON node" : "Add node"}
           </button>
-        )
-      }
-      bubbleRightSlot={(ed) =>
-        ed.isActive("nodeLink") ? (
-          <button
-            onClick={() =>
-              ed
-                .chain()
-                .focus()
-                .extendMarkRange("nodeLink")
-                .unsetMark("nodeLink")
-                .run()
-            }
-            className="ml-1 flex items-center gap-1 rounded-lg bg-duo-red/10 px-2 py-1 text-[10px] font-extrabold uppercase text-duo-red hover:bg-duo-red/20"
-          >
-            <Link2Off size={12} /> Unlink
-          </button>
-        ) : (
-          <button
-            onPointerDown={(e) => {
-              const { from, to } = ed.state.selection;
-              if (from === to) return;
-              e.preventDefault();
-              e.stopPropagation();
-              const selectionText = ed.state.doc.textBetween(from, to, " ");
-              const rect = (
-                e.currentTarget as HTMLElement
-              ).getBoundingClientRect();
-              linkDrag.start(
-                {
-                  x: rect.left + rect.width / 2,
-                  y: rect.top + rect.height / 2,
-                },
-                {
-                  selectionText,
-                  applyLink: (nodeId: string) =>
-                    applyNodeLinkSafe(ed, from, to, nodeId),
-                }
-              );
-            }}
-            title="Drag onto a node to link"
-            className="ml-1 flex items-center gap-1 rounded-lg bg-duo-green px-2 py-1 text-[10px] font-extrabold uppercase text-white shadow-duoGreen active:translate-y-[1px] active:shadow-none touch-none"
-          >
-            <Unplug size={12} /> Drag
-          </button>
-        )
-      }
+        );
+      }}
     />
   );
 }

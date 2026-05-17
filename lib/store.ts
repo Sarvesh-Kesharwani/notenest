@@ -11,6 +11,8 @@ export interface GraphNode {
   title: string;
   contentType: NodeContentType;
   text?: string;
+  /** Plain-text preview shown inside the graph node (e.g. dragged-in selection). */
+  rawText?: string;
   videoUrl?: string;
   videoFileName?: string;
   videoDataUrl?: string;
@@ -46,7 +48,7 @@ interface NotesState {
 const DUO_COLORS = ["#58CC02", "#1CB0F6", "#FFC800", "#CE82FF", "#FF4B4B"];
 
 const DEFAULT_EDITOR_HTML =
-  "<h1>Welcome to NoteNest</h1><p>Select any text, then drag the green <strong>Drag to node</strong> button onto a node to link it.</p><p>Hover a green pill to see its connection. Click it to jump to that node in the graph.</p>";
+  '<pre><code class="language-json">{\n  "note": "Start with JSON here"\n}</code></pre>';
 
 const DEFAULT_NODES: GraphNode[] = [
   {
@@ -123,6 +125,7 @@ export const useNotesStore = create<NotesState>()(
           title: partial?.title ?? "Untitled node",
           contentType: partial?.contentType ?? "text",
           text: partial?.text,
+          rawText: partial?.rawText,
           videoUrl: partial?.videoUrl,
           videoFileName: partial?.videoFileName,
           videoDataUrl: partial?.videoDataUrl,
@@ -175,7 +178,10 @@ export const useNotesStore = create<NotesState>()(
           ),
         }),
 
-      selectNode: (id) => set({ selectedNodeId: id }),
+      selectNode: (id) => {
+        if (get().selectedNodeId === id) return;
+        set({ selectedNodeId: id });
+      },
       getNode: (id) => get().nodes.find((node) => node.id === id),
 
       setHoveredLinkNode: (id) => {

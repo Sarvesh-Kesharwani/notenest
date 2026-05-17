@@ -19,6 +19,7 @@ import {
   triggerDownload,
 } from "@/lib/local-video-client";
 import RichEditor from "./RichEditor";
+import VideoPlayer from "./VideoPlayer";
 import { NodeLinkMark } from "@/lib/node-link-mark";
 
 const COLOR_SWATCHES = [
@@ -393,9 +394,8 @@ export default function NodeModal() {
                     />
                   </div>
                 ) : videoUrl ? (
-                  <video
+                  <VideoPlayer
                     src={videoUrl}
-                    controls
                     className="w-full rounded-2xl border-2 border-duo-border bg-black shadow-duo"
                   />
                 ) : (
@@ -420,9 +420,8 @@ export default function NodeModal() {
               <div className="min-h-0 flex-1 overflow-hidden px-8 pt-6 pb-4">
                 <div className="mx-auto flex h-full max-w-[820px] items-center justify-center">
                   {localVideoSrc ? (
-                    <video
+                    <VideoPlayer
                       src={localVideoSrc}
-                      controls
                       className="max-h-full w-full rounded-2xl border-2 border-duo-border bg-black object-contain shadow-duo"
                     />
                   ) : (

@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { SlashCommands, type SlashCommandItem } from "@/lib/slash-commands";
 import { CodeBlockWithWrap } from "@/lib/code-block";
-import { WrapText } from "lucide-react";
+import { JsonCodeHighlight } from "@/lib/json-code-highlight";
 import "tippy.js/dist/tippy.css";
 import "tippy.js/animations/shift-away.css";
 import { useEffect, useRef } from "react";
@@ -51,6 +51,87 @@ import clsx from "clsx";
 
 export interface RichEditorRef {
   editor: Editor | null;
+}
+
+const EMPTY_JSON_BLOCK = "<pre><code>{}</code></pre>";
+
+function normalizeJsonCodeBlocks(html: string): string {
+  const blocks = extractCodeBlockText(html);
+  const sourceBlocks = blocks.length > 0 ? blocks : [htmlToPlainText(html)];
+
+  const normalized = sourceBlocks
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => `<pre><code class="language-json">${escapeHtml(formatJsonBlock(block))}</code></pre>`)
+    .join("");
+
+  return normalized || EMPTY_JSON_BLOCK;
+}
+
+function formatJsonBlock(block: string): string {
+  const trimmed = block.trim();
+  if (!trimmed) return trimmed;
+  const first = trimmed[0];
+  const looksLikeObjectFragment = /^"[^"]+"\s*:/.test(trimmed);
+  if (first !== "{" && first !== "[" && !looksLikeObjectFragment) return trimmed;
+
+  try {
+    return JSON.stringify(JSON.parse(trimmed), null, 2);
+  } catch {
+    if (looksLikeObjectFragment) {
+      try {
+        const formatted = JSON.stringify(JSON.parse(`{${trimmed}}`), null, 2);
+        return formatted
+          .replace(/^\{\n/, "")
+          .replace(/\n\}$/, "")
+          .replace(/^  /gm, "");
+      } catch {
+        return trimmed;
+      }
+    }
+
+    return trimmed;
+  }
+}
+
+function extractCodeBlockText(html: string): string[] {
+  if (!html.trim()) return [];
+
+  if (typeof document === "undefined") {
+    const matches = [...html.matchAll(/<pre[^>]*>([\s\S]*?)<\/pre>/gi)];
+    return matches.map((match) =>
+      match[1].replace(/<[^>]*>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+    );
+  }
+
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  return Array.from(template.content.querySelectorAll("pre")).map(
+    (pre) => pre.textContent ?? ""
+  );
+}
+
+function htmlToPlainText(html: string): string {
+  if (!html.trim()) return "";
+
+  const withBreaks = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6]|blockquote|pre)>/gi, "\n");
+
+  if (typeof document === "undefined") {
+    return withBreaks.replace(/<[^>]*>/g, " ");
+  }
+
+  const template = document.createElement("template");
+  template.innerHTML = withBreaks;
+  return template.content.textContent ?? "";
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 export interface RichEditorProps {
@@ -69,6 +150,14 @@ export interface RichEditorProps {
   variant?: "page" | "compact";
   autoFocus?: boolean;
   onEditorReady?: (editor: Editor) => void;
+  jsonBlocksOnly?: boolean;
+  /**
+   * If provided, the scroll position of the editor viewport is persisted to
+   * localStorage under this key and restored when the same key mounts again.
+   * The component restores the most recent saved offset on every key change
+   * (e.g. after the editor value is set via reload-restore).
+   */
+  scrollKey?: string;
 }
 
 export default function RichEditor({
@@ -83,8 +172,11 @@ export default function RichEditor({
   variant = "page",
   autoFocus,
   onEditorReady,
+  jsonBlocksOnly = false,
+  scrollKey,
 }: RichEditorProps) {
-  const lastExternal = useRef(value);
+  const initialValue = jsonBlocksOnly ? normalizeJsonCodeBlocks(value) : value;
+  const lastExternal = useRef(initialValue);
   const pendingExternalSync = useRef(0);
 
   const editor = useEditor({
@@ -94,8 +186,10 @@ export default function RichEditor({
         codeBlock: false,
       }),
       CodeBlockWithWrap.configure({
+        defaultLanguage: jsonBlocksOnly ? "json" : null,
         HTMLAttributes: { class: "tt-code" },
       }),
+      JsonCodeHighlight,
       Underline,
       TextStyle,
       Color,
@@ -119,11 +213,25 @@ export default function RichEditor({
       }),
       ...extraExtensions,
     ],
-    content: value,
+    content: initialValue,
     immediatelyRender: false,
     autofocus: autoFocus,
     onUpdate({ editor }) {
       const html = editor.getHTML();
+      if (jsonBlocksOnly) {
+        const normalized = normalizeJsonCodeBlocks(html);
+        lastExternal.current = normalized;
+        onChange(normalized);
+        if (normalized !== html) {
+          queueMicrotask(() => {
+            if (!editor.isDestroyed && editor.getHTML() !== normalized) {
+              editor.commands.setContent(normalized, false);
+            }
+          });
+        }
+        return;
+      }
+
       lastExternal.current = html;
       onChange(html);
     },
@@ -142,22 +250,24 @@ export default function RichEditor({
   useEffect(() => {
     if (!editor) return;
 
-    if (value === lastExternal.current || value === editor.getHTML()) return;
+    const nextValue = jsonBlocksOnly ? normalizeJsonCodeBlocks(value) : value;
+
+    if (nextValue === lastExternal.current || nextValue === editor.getHTML()) return;
 
     const syncId = ++pendingExternalSync.current;
 
     queueMicrotask(() => {
       if (pendingExternalSync.current !== syncId || editor.isDestroyed) return;
-      if (value === lastExternal.current || value === editor.getHTML()) return;
+      if (nextValue === lastExternal.current || nextValue === editor.getHTML()) return;
 
-      editor.commands.setContent(value, false);
-      lastExternal.current = value;
+      editor.commands.setContent(nextValue, false);
+      lastExternal.current = nextValue;
     });
 
     return () => {
       pendingExternalSync.current++;
     };
-  }, [value, editor]);
+  }, [value, editor, jsonBlocksOnly]);
 
   useEffect(() => {
     if (editor && onEditorReady) onEditorReady(editor);
@@ -169,103 +279,115 @@ export default function RichEditor({
 
   return (
     <div className={clsx("flex h-full flex-col bg-white", className)}>
-      <Toolbar editor={editor} right={rightToolbarSlot} />
+      {jsonBlocksOnly ? (
+        <JsonToolbar right={rightToolbarSlot} />
+      ) : (
+        <Toolbar editor={editor} right={rightToolbarSlot} />
+      )}
 
-      <BubbleMenu
-        editor={editor}
-        tippyOptions={{ duration: 120, placement: "top" }}
-        shouldShow={({ editor, from, to }) =>
-          from !== to && editor.isEditable
-        }
-      >
-        <div className="flex items-center gap-0.5 rounded-2xl border-2 border-duo-border bg-white p-1 shadow-duo">
-          <BubbleIconBtn
-            active={editor.isActive("bold")}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            label="Bold"
-          >
-            <Bold size={14} />
-          </BubbleIconBtn>
-          <BubbleIconBtn
-            active={editor.isActive("italic")}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            label="Italic"
-          >
-            <Italic size={14} />
-          </BubbleIconBtn>
-          <BubbleIconBtn
-            active={editor.isActive("underline")}
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-            label="Underline"
-          >
-            <UnderlineIcon size={14} />
-          </BubbleIconBtn>
-          <BubbleIconBtn
-            active={editor.isActive("strike")}
-            onClick={() => editor.chain().focus().toggleStrike().run()}
-            label="Strike"
-          >
-            <Strikethrough size={14} />
-          </BubbleIconBtn>
-          <BubbleIconBtn
-            active={editor.isActive("highlight")}
-            onClick={() => editor.chain().focus().toggleHighlight().run()}
-            label="Highlight"
-          >
-            <Highlighter size={14} />
-          </BubbleIconBtn>
-          <BubbleIconBtn
-            active={editor.isActive("code")}
-            onClick={() => editor.chain().focus().toggleCode().run()}
-            label="Inline code"
-          >
-            <Code size={14} />
-          </BubbleIconBtn>
-          <div className="mx-1 h-5 w-px bg-duo-border" />
-          <BubbleIconBtn
-            active={editor.isActive("link")}
-            onClick={() => {
-              const prev = editor.getAttributes("link").href as
-                | string
-                | undefined;
-              const url = window.prompt("Link URL", prev ?? "https://");
-              if (url === null) return;
-              if (url === "") {
-                editor.chain().focus().extendMarkRange("link").unsetLink().run();
-                return;
-              }
-              editor
-                .chain()
-                .focus()
-                .extendMarkRange("link")
-                .setLink({ href: url })
-                .run();
-            }}
-            label="Link URL"
-          >
-            <Link2 size={14} />
-          </BubbleIconBtn>
-          {bubbleRightSlot?.(editor)}
-        </div>
-      </BubbleMenu>
+      {!jsonBlocksOnly && (
+        <BubbleMenu
+          editor={editor}
+          tippyOptions={{ duration: 120, placement: "top" }}
+          shouldShow={({ editor, from, to }) =>
+            from !== to && editor.isEditable
+          }
+        >
+          <div className="flex items-center gap-0.5 rounded-2xl border-2 border-duo-border bg-white p-1 shadow-duo">
+            <BubbleIconBtn
+              active={editor.isActive("bold")}
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              label="Bold"
+            >
+              <Bold size={14} />
+            </BubbleIconBtn>
+            <BubbleIconBtn
+              active={editor.isActive("italic")}
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              label="Italic"
+            >
+              <Italic size={14} />
+            </BubbleIconBtn>
+            <BubbleIconBtn
+              active={editor.isActive("underline")}
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+              label="Underline"
+            >
+              <UnderlineIcon size={14} />
+            </BubbleIconBtn>
+            <BubbleIconBtn
+              active={editor.isActive("strike")}
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+              label="Strike"
+            >
+              <Strikethrough size={14} />
+            </BubbleIconBtn>
+            <BubbleIconBtn
+              active={editor.isActive("highlight")}
+              onClick={() => editor.chain().focus().toggleHighlight().run()}
+              label="Highlight"
+            >
+              <Highlighter size={14} />
+            </BubbleIconBtn>
+            <BubbleIconBtn
+              active={editor.isActive("code")}
+              onClick={() => editor.chain().focus().toggleCode().run()}
+              label="Inline code"
+            >
+              <Code size={14} />
+            </BubbleIconBtn>
+            <div className="mx-1 h-5 w-px bg-duo-border" />
+            <BubbleIconBtn
+              active={editor.isActive("link")}
+              onClick={() => {
+                const prev = editor.getAttributes("link").href as
+                  | string
+                  | undefined;
+                const url = window.prompt("Link URL", prev ?? "https://");
+                if (url === null) return;
+                if (url === "") {
+                  editor.chain().focus().extendMarkRange("link").unsetLink().run();
+                  return;
+                }
+                editor
+                  .chain()
+                  .focus()
+                  .extendMarkRange("link")
+                  .setLink({ href: url })
+                  .run();
+              }}
+              label="Link URL"
+            >
+              <Link2 size={14} />
+            </BubbleIconBtn>
+            {bubbleRightSlot?.(editor)}
+          </div>
+        </BubbleMenu>
+      )}
 
-      <FloatingMenu
-        editor={editor}
-        tippyOptions={{ placement: "left-start", duration: 120 }}
-        shouldShow={({ editor, state }) => {
-          const { $from, empty } = state.selection;
-          if (!empty) return false;
-          if (!editor.isEditable) return false;
-          const node = $from.parent;
-          return node.type.name === "paragraph" && node.content.size === 0;
-        }}
-      >
-        <div className="-ml-12 flex h-8 w-8 items-center justify-center rounded-full bg-duo-soft text-duo-green shadow-sm">
-          <span className="text-lg font-black leading-none">+</span>
-        </div>
-      </FloatingMenu>
+      {!jsonBlocksOnly && (
+        <FloatingMenu
+          editor={editor}
+          tippyOptions={{ placement: "left-start", duration: 120 }}
+          shouldShow={({ editor, state }) => {
+            const { $from, empty } = state.selection;
+            if (!empty) return false;
+            if (!editor.isEditable) return false;
+            const node = $from.parent;
+            return node.type.name === "paragraph" && node.content.size === 0;
+          }}
+        >
+          <div className="-ml-12 flex h-8 w-8 items-center justify-center rounded-full bg-duo-soft text-duo-green shadow-sm">
+            <span className="text-lg font-black leading-none">+</span>
+          </div>
+        </FloatingMenu>
+      )}
 
-      <div
+      <ScrollPersistedViewport
+        scrollKey={scrollKey}
+        // Re-restore once the editor's value swap completes so reload lands
+        // the user on the exact line they were last viewing.
+        restoreSignal={value}
         className={clsx(
           "flex-1 overflow-y-auto",
           variant === "page" ? "px-6 py-8 md:px-12" : "p-2"
@@ -273,23 +395,105 @@ export default function RichEditor({
       >
         <div className={variant === "page" ? "mx-auto max-w-[720px]" : ""}>
           <EditorContent editor={editor} />
-          <AppendBlockButton editor={editor} />
+          <AppendBlockButton editor={editor} jsonBlocksOnly={jsonBlocksOnly} />
         </div>
-      </div>
+      </ScrollPersistedViewport>
     </div>
   );
 }
 
-function AppendBlockButton({ editor }: { editor: Editor }) {
+function ScrollPersistedViewport({
+  scrollKey,
+  restoreSignal,
+  className,
+  children,
+}: {
+  scrollKey: string | undefined;
+  restoreSignal: unknown;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const restoredKeyRef = useRef<string | undefined>(undefined);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const storageKey = scrollKey ? `notenest:scroll:${scrollKey}` : null;
+
+  // Restore on key change AND whenever the rendered value swaps (e.g. after
+  // the editor finishes setting new HTML on reload-restore). We retry across
+  // a couple of frames so the layout has measured by the time we set scroll.
+  useEffect(() => {
+    if (!storageKey) return;
+    if (!ref.current) return;
+    let attempts = 0;
+    const apply = () => {
+      const el = ref.current;
+      if (!el) return;
+      const raw = localStorage.getItem(storageKey);
+      const top = raw ? Number(raw) : NaN;
+      if (Number.isFinite(top)) el.scrollTop = top;
+      attempts++;
+      if (attempts < 3) requestAnimationFrame(apply);
+    };
+    restoredKeyRef.current = storageKey;
+    requestAnimationFrame(apply);
+  }, [storageKey, restoreSignal]);
+
+  // Save on scroll (debounced) only after we've restored for this key, so the
+  // initial 0 doesn't clobber the saved value.
+  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!storageKey) return;
+    if (restoredKeyRef.current !== storageKey) return;
+    const top = e.currentTarget.scrollTop;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(storageKey, String(Math.round(top)));
+      } catch {
+        /* ignore */
+      }
+    }, 200);
+  };
+
+  return (
+    <div ref={ref} onScroll={onScroll} className={className}>
+      {children}
+    </div>
+  );
+}
+
+function AppendBlockButton({
+  editor,
+  jsonBlocksOnly,
+}: {
+  editor: Editor;
+  jsonBlocksOnly?: boolean;
+}) {
   const append = () => {
     const end = editor.state.doc.content.size;
+    if (jsonBlocksOnly) {
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(end, {
+          type: "codeBlock",
+          attrs: { language: "json" },
+          content: [{ type: "text", text: "{}" }],
+        })
+        .run();
+    } else {
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(end, { type: "paragraph" })
+        .run();
+    }
+    const newEnd = editor.state.doc.content.size;
     editor
       .chain()
       .focus()
-      .insertContentAt(end, { type: "paragraph" })
+      .setTextSelection(jsonBlocksOnly ? Math.max(1, newEnd - 1) : newEnd)
       .run();
-    const newEnd = editor.state.doc.content.size;
-    editor.chain().focus().setTextSelection(newEnd).run();
     requestAnimationFrame(() => {
       editor.view.dom.scrollIntoView?.({ block: "end" });
     });
@@ -302,8 +506,20 @@ function AppendBlockButton({ editor }: { editor: Editor }) {
       title="Add a new block at the end"
       className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-duo-border bg-white py-3 text-xs font-extrabold uppercase tracking-wide text-gray-400 hover:border-duo-green hover:text-duo-greenDark"
     >
-      <span className="text-lg leading-none">+</span> Add block
+      <span className="text-lg leading-none">+</span>{" "}
+      {jsonBlocksOnly ? "Add JSON block" : "Add block"}
     </button>
+  );
+}
+
+function JsonToolbar({ right }: { right?: React.ReactNode }) {
+  return (
+    <div className="sticky top-0 z-10 flex items-center gap-2 border-b-2 border-duo-border bg-white/95 px-3 py-2 backdrop-blur">
+      <div className="rounded-xl bg-duo-blue/15 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wide text-duo-blue">
+        JSON blocks
+      </div>
+      {right && <div className="ml-auto flex items-center gap-2">{right}</div>}
+    </div>
   );
 }
 
@@ -421,19 +637,6 @@ function Toolbar({
       >
         <Minus size={16} />
       </IconBtn>
-      {editor.isActive("codeBlock") && (
-        <IconBtn
-          active={editor.getAttributes("codeBlock").wrap === true}
-          onClick={() => editor.chain().focus().toggleCodeBlockWrap().run()}
-          label={
-            editor.getAttributes("codeBlock").wrap
-              ? "Disable word wrap"
-              : "Enable word wrap"
-          }
-        >
-          <WrapText size={16} />
-        </IconBtn>
-      )}
       <Divider />
       <IconBtn
         active={editor.isActive({ textAlign: "left" })}

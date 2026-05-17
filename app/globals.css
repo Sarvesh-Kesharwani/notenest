@@ -142,19 +142,15 @@ body {
 /* Code block — light theme */
 .tiptap pre,
 .tiptap .tt-code {
-  @apply my-4 overflow-x-auto rounded-2xl px-5 py-4 font-mono text-[0.9em] leading-relaxed;
-  background: #f5f7f3;
-  color: #2d3b23;
-  border: 2px solid #e3ead9;
+  @apply my-3 max-w-full overflow-x-auto rounded-xl px-4 py-4 font-mono text-[0.78em] leading-relaxed;
+  background: #f7f6f4;
+  color: #6f6a64;
+  border: 0;
   white-space: pre;
-}
-.tiptap pre[data-wrap="true"],
-.tiptap .tt-code[data-wrap="true"],
-.tt-code-wrapper[data-wrap="true"] pre,
-.tt-code-wrapper[data-wrap="true"] .tt-code {
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
+  overflow-wrap: normal;
+  word-break: normal;
+  scrollbar-color: #d8d3cd transparent;
+  scrollbar-width: thin;
 }
 .tiptap pre code,
 .tiptap .tt-code code {
@@ -165,6 +161,61 @@ body {
   word-break: inherit;
   overflow-wrap: inherit;
   display: block;
+}
+.tiptap pre[data-wrap="true"],
+.tiptap .tt-code[data-wrap="true"] {
+  white-space: pre-wrap;
+  overflow-x: hidden;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.tiptap .tt-code[data-json="true"] .json-token-key {
+  white-space: pre;
+}
+/* Wrapper carries the inline-block layout so the value string AND its
+   trailing punctuation (",", "]", "}") wrap together as one block. */
+.tiptap .tt-code[data-json="true"] .json-token-string-wrap {
+  display: inline-block;
+  max-width: calc(100% - 18ch);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  vertical-align: top;
+}
+/* The trailing-punct decoration nests inside the wrapper. The .json-token-punct
+   class on it provides the punct color, which overrides the wrapper's string
+   color, while the layout still comes from the wrapper above. */
+.tiptap .tt-code[data-json="true"] .json-token-trail {
+  display: inline;
+}
+.tiptap .tt-code::-webkit-scrollbar,
+.tiptap pre::-webkit-scrollbar {
+  height: 8px;
+}
+.tiptap .tt-code::-webkit-scrollbar-track,
+.tiptap pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tiptap .tt-code::-webkit-scrollbar-thumb,
+.tiptap pre::-webkit-scrollbar-thumb {
+  background: #d8d3cd;
+  border-radius: 999px;
+}
+.tiptap .json-token-key {
+  color: #d21f87;
+}
+.tiptap .json-token-string {
+  color: #4a9a00;
+}
+.tiptap .json-token-number {
+  color: #b7791f;
+}
+.tiptap .json-token-bool,
+.tiptap .json-token-null {
+  color: #8750c8;
+}
+.tiptap .json-token-punct {
+  color: #9a948d;
 }
 
 /* HR */
