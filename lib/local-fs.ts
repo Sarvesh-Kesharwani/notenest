@@ -10,6 +10,25 @@ export type FsEntry = {
   children?: FsEntry[];
 };
 
+export type StoredGraphNode = {
+  id: string;
+  title: string;
+  contentType: string;
+  text?: string;
+  rawText?: string;
+  videoUrl?: string;
+  videoFileName?: string;
+  videoDataUrl?: string;
+  videoLocalPath?: string;
+  position: { x: number; y: number };
+  color: string;
+};
+
+export type NoteFileContent = {
+  html: string;
+  nodes: StoredGraphNode[];
+};
+
 const DB_NAME = "notenest-fs";
 const STORE = "handles";
 const ROOT_KEY = "root";
@@ -189,6 +208,20 @@ export async function createFile(
   await writeFile(root, path, content);
 }
 
+export async function fileExists(
+  root: FileSystemDirectoryHandle,
+  path: string
+): Promise<boolean> {
+  try {
+    const { dirs, file } = splitPath(path);
+    const dir = await resolveDir(root, dirs, false);
+    await dir.getFileHandle(file, { create: false });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function deletePath(
   root: FileSystemDirectoryHandle,
   path: string,
@@ -204,21 +237,65 @@ export async function deletePath(
 // losslessly. Tools that render .md will still see the HTML as raw markup.
 const HTML_FENCE_OPEN = "<!--notenest:html-->";
 const HTML_FENCE_CLOSE = "<!--/notenest:html-->";
+const GRAPH_FENCE_OPEN = "<!--notenest:graph-->";
+const GRAPH_FENCE_CLOSE = "<!--/notenest:graph-->";
 
-export function wrapHtmlAsMd(html: string): string {
-  return `${HTML_FENCE_OPEN}\n${html}\n${HTML_FENCE_CLOSE}\n`;
+export function wrapHtmlAsMd(html: string, nodes: StoredGraphNode[] = []): string {
+  const graph = JSON.stringify({ nodes }, null, 2);
+  return `${HTML_FENCE_OPEN}\n${html}\n${HTML_FENCE_CLOSE}\n\n${GRAPH_FENCE_OPEN}\n${graph}\n${GRAPH_FENCE_CLOSE}\n`;
 }
 
 export function unwrapMdToHtml(md: string): string {
+  return unwrapMdToContent(md).html;
+}
+
+export function unwrapMdToContent(md: string): NoteFileContent {
   const o = md.indexOf(HTML_FENCE_OPEN);
   const c = md.lastIndexOf(HTML_FENCE_CLOSE);
   if (o !== -1 && c !== -1 && c > o) {
-    return md.slice(o + HTML_FENCE_OPEN.length, c).trim();
+    return {
+      html: md.slice(o + HTML_FENCE_OPEN.length, c).trim(),
+      nodes: unwrapMdToGraph(md),
+    };
   }
   // plain markdown: render as escaped paragraphs
   const escaped = md
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
-  return `<p>${escaped.replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br/>")}</p>`;
+  return {
+    html: `<p>${escaped.replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br/>")}</p>`,
+    nodes: unwrapMdToGraph(md),
+  };
+}
+
+function unwrapMdToGraph(md: string): StoredGraphNode[] {
+  const o = md.indexOf(GRAPH_FENCE_OPEN);
+  const c = md.lastIndexOf(GRAPH_FENCE_CLOSE);
+  if (o === -1 || c === -1 || c <= o) return [];
+
+  try {
+    const parsed = JSON.parse(md.slice(o + GRAPH_FENCE_OPEN.length, c).trim()) as {
+      nodes?: unknown;
+    };
+
+    if (!Array.isArray(parsed.nodes)) return [];
+    return parsed.nodes.filter(isStoredGraphNode);
+  } catch {
+    return [];
+  }
+}
+
+function isStoredGraphNode(value: unknown): value is StoredGraphNode {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<StoredGraphNode>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.title === "string" &&
+    typeof candidate.contentType === "string" &&
+    typeof candidate.color === "string" &&
+    !!candidate.position &&
+    typeof candidate.position.x === "number" &&
+    typeof candidate.position.y === "number"
+  );
 }

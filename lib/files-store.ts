@@ -7,16 +7,20 @@ import {
   createFolder,
   deletePath,
   ensurePermission,
+  fileExists,
   isFsAccessSupported,
   listTree,
   loadSavedRoot,
   pickRoot,
   readFile,
-  unwrapMdToHtml,
+  unwrapMdToContent,
   wrapHtmlAsMd,
   writeFile,
   type FsEntry,
+  type NoteFileContent,
+  type StoredGraphNode,
 } from "./local-fs";
+import type { StudyTopic } from "./study-store";
 
 interface FilesState {
   supported: boolean;
@@ -32,10 +36,11 @@ interface FilesState {
   chooseRoot: () => Promise<void>;
   refresh: () => Promise<void>;
   toggleExpand: (path: string) => void;
-  openFile: (path: string) => Promise<string | null>;
-  saveCurrentHtml: (html: string) => Promise<void>;
+  openFile: (path: string) => Promise<NoteFileContent | null>;
+  saveCurrentHtml: (html: string, nodes?: StoredGraphNode[]) => Promise<void>;
   newFile: (parentDir: string, name: string) => Promise<string | null>;
   newFolder: (parentDir: string, name: string) => Promise<void>;
+  syncStudyTopicsToFiles: (topics: StudyTopic[]) => Promise<void>;
   removeEntry: (path: string, isDir: boolean) => Promise<void>;
   closeFile: () => void;
 }
@@ -100,20 +105,20 @@ export const useFilesStore = create<FilesState>()(
     if (!root) return null;
     try {
       const md = await readFile(root, path);
-      const html = unwrapMdToHtml(md);
+      const content = unwrapMdToContent(md);
       set({ openedPath: path });
-      return html;
+      return content;
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
       return null;
     }
   },
 
-  saveCurrentHtml: async (html) => {
+  saveCurrentHtml: async (html, nodes = []) => {
     const { root, openedPath } = get();
     if (!root || !openedPath) return;
     try {
-      await writeFile(root, openedPath, wrapHtmlAsMd(html));
+      await writeFile(root, openedPath, wrapHtmlAsMd(html, nodes));
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     }
@@ -143,6 +148,51 @@ export const useFilesStore = create<FilesState>()(
     await get().refresh();
   },
 
+  syncStudyTopicsToFiles: async (topics) => {
+    const root = get().root;
+    if (!root) return;
+    set({ loading: true, error: null });
+
+    try {
+      const byParent = new Map<string | null, StudyTopic[]>();
+      for (const topic of topics) {
+        const siblings = byParent.get(topic.parentId) ?? [];
+        siblings.push(topic);
+        byParent.set(topic.parentId, siblings);
+      }
+
+      const expanded = { ...get().expanded };
+      const walk = async (parentId: string | null, parentPath: string) => {
+        const children = (byParent.get(parentId) ?? []).sort((a, b) =>
+          a.title.localeCompare(b.title)
+        );
+
+        for (const topic of children) {
+          const folderName = safePathSegment(topic.title);
+          const folderPath = parentPath ? `${parentPath}/${folderName}` : folderName;
+          await createFolder(root, folderPath);
+          expanded[folderPath] = true;
+
+          const notePath = `${folderPath}/${folderName}.md`;
+          if (!(await fileExists(root, notePath))) {
+            await createFile(root, notePath, defaultTopicNote(topic.title));
+          }
+
+          await walk(topic.id, folderPath);
+        }
+      };
+
+      await walk(null, "");
+      set({ expanded });
+      await get().refresh();
+    } catch (e) {
+      set({
+        loading: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  },
+
   removeEntry: async (path, isDir) => {
     const root = get().root;
     if (!root) return;
@@ -161,3 +211,29 @@ export const useFilesStore = create<FilesState>()(
     }
   )
 );
+
+function safePathSegment(value: string) {
+  return (
+    value
+      .trim()
+      .replace(/[<>:"\\|?*\u0000-\u001f]/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/[. ]+$/g, "")
+      .slice(0, 80) || "Untitled topic"
+  );
+}
+
+function defaultTopicNote(title: string) {
+  const json = JSON.stringify({ topic: title, notes: [] }, null, 2);
+  return wrapHtmlAsMd(
+    `<pre><code class="language-json">${escapeHtml(json)}</code></pre>`,
+    []
+  );
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}

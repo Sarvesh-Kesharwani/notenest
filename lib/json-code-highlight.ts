@@ -21,6 +21,7 @@ function classForStandaloneMatch(match: RegExpExecArray): string {
   if (match[1]) return "json-token-key";
   if (match[4]) return match[4] === "null" ? "json-token-null" : "json-token-bool";
   if (match[5]) return "json-token-number";
+  if (match[6] === ",") return "json-token-punct json-token-comma";
   return "json-token-punct";
 }
 
@@ -69,6 +70,14 @@ export const JsonCodeHighlight = Extension.create({
                         class: "json-token-trail json-token-punct",
                       })
                     );
+                    for (let i = 0; i < trail.length; i++) {
+                      if (trail[i] !== ",") continue;
+                      decorations.push(
+                        Decoration.inline(stringEnd + i, stringEnd + i + 1, {
+                          class: "json-token-comma",
+                        })
+                      );
+                    }
                   }
                 } else {
                   decorations.push(

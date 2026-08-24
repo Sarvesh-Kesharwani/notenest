@@ -188,6 +188,9 @@ body {
 .tiptap .tt-code[data-json="true"] .json-token-trail {
   display: inline;
 }
+.tiptap .tt-code[data-json="true"] .json-token-comma {
+  visibility: hidden;
+}
 .tiptap .tt-code::-webkit-scrollbar,
 .tiptap pre::-webkit-scrollbar {
   height: 8px;

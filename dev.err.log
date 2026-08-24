@@ -1,0 +1,186 @@
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.uc2ns50s5m'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.uc2ns50s5m'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.cfroqw4gq7q'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.cfroqw4gq7q'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.d5vbunaljps'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.d5vbunaljps'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.hf0r4whbiif'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.hf0r4whbiif'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.lgz5mwa6ooq'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.lgz5mwa6ooq'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.i19evifrojn'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.i19evifrojn'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.mm8iqcnww9'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.mm8iqcnww9'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.59xpm25t06w'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.59xpm25t06w'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.aajrxkrmrvw'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.aajrxkrmrvw'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.ptsl3speal'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.ptsl3speal'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.mkrybyh9qo8'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.mkrybyh9qo8'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.lh0y9k394jb'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.lh0y9k394jb'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\icon.svg\[__metadata_id__]\route\app-paths-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\icon.svg\\[__metadata_id__]\\route\\app-paths-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\pages\_app\build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\pages\\_app\\build-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\pages\_app\build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\pages\\_app\\build-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\pages\_app\build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\pages\\_app\\build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.hjhd83tlxye'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.hjhd83tlxye'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\server\app\page\app-build-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\server\\app\\page\\app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.ym4mzk8jnql'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.ym4mzk8jnql'
+}
+[Error: ENOENT: no such file or directory, open 'D:\NodeNest\.next\static\development\_buildManifest.js.tmp.fwr7475sz5a'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\NodeNest\\.next\\static\\development\\_buildManifest.js.tmp.fwr7475sz5a'
+}

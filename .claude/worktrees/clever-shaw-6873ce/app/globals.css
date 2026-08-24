@@ -1,0 +1,250 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: var(--font-body), system-ui, -apple-system, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  background: #f7f7f7;
+  color: #3c3c3c;
+  font-family: var(--font-body);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Buttons */
+.btn-duo {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold uppercase tracking-wide text-white bg-duo-green shadow-duoGreen active:translate-y-[2px] active:shadow-none transition-all disabled:opacity-40 disabled:cursor-not-allowed;
+}
+.btn-duo-blue {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold uppercase tracking-wide text-white bg-duo-blue shadow-duoBlue active:translate-y-[2px] active:shadow-none transition-all;
+}
+.btn-duo-ghost {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-2xl font-bold text-duo-ink bg-white border-2 border-duo-border hover:bg-duo-soft transition-colors;
+}
+
+/* =========================================================
+   TipTap — Notion-like page
+   ========================================================= */
+
+.tiptap {
+  @apply outline-none;
+  caret-color: #58cc02;
+}
+
+.tiptap-page {
+  @apply text-[17px] leading-[1.75] text-duo-ink;
+  min-height: calc(100vh - 220px);
+}
+
+.tiptap-compact {
+  @apply text-[15px] leading-[1.6] text-duo-ink;
+}
+
+/* Headings */
+.tiptap h1 {
+  @apply mt-8 mb-3 text-[2.25rem] font-black leading-tight tracking-tight text-duo-ink;
+}
+.tiptap h2 {
+  @apply mt-7 mb-2 text-[1.75rem] font-black leading-tight tracking-tight text-duo-ink;
+}
+.tiptap h3 {
+  @apply mt-5 mb-2 text-[1.375rem] font-extrabold leading-snug tracking-tight text-duo-ink;
+}
+.tiptap p {
+  @apply my-2.5;
+}
+.tiptap p:first-child {
+  @apply mt-0;
+}
+
+/* Inline */
+.tiptap strong {
+  @apply font-extrabold text-duo-ink;
+}
+.tiptap em {
+  @apply italic;
+}
+.tiptap s {
+  @apply line-through text-gray-500;
+}
+.tiptap u {
+  text-underline-offset: 3px;
+}
+.tiptap mark {
+  @apply rounded px-1;
+  background: #fff1a8;
+  color: #4a3f00;
+}
+.tiptap code {
+  @apply rounded-md px-1.5 py-0.5 font-mono text-[0.9em];
+  background: #f0f4eb;
+  color: #2d6914;
+  border: 1px solid #d9e6cf;
+}
+.tiptap .tt-link,
+.tiptap a {
+  @apply text-duo-blue underline decoration-2 underline-offset-2 hover:decoration-[3px];
+}
+
+/* Lists */
+.tiptap ul,
+.tiptap ol {
+  @apply my-3 pl-7;
+}
+.tiptap ul {
+  list-style: disc;
+}
+.tiptap ol {
+  list-style: decimal;
+}
+.tiptap li {
+  @apply my-1;
+}
+.tiptap li::marker {
+  color: #58cc02;
+  font-weight: 900;
+}
+
+/* Task list */
+.tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.tiptap ul[data-type="taskList"] li {
+  @apply flex items-start gap-2 my-1;
+}
+.tiptap ul[data-type="taskList"] li > label {
+  @apply mt-1 shrink-0;
+  user-select: none;
+}
+.tiptap ul[data-type="taskList"] li > label > input[type="checkbox"] {
+  @apply h-4 w-4 rounded-md border-2 border-duo-border accent-duo-green cursor-pointer;
+}
+.tiptap ul[data-type="taskList"] li > div {
+  @apply flex-1;
+}
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
+  @apply text-gray-400 line-through;
+}
+
+/* Blockquote */
+.tiptap blockquote {
+  @apply my-4 border-l-[4px] border-duo-green pl-4 italic text-gray-600;
+}
+
+/* Code block — light theme */
+.tiptap pre,
+.tiptap .tt-code {
+  @apply my-4 overflow-x-auto rounded-2xl px-5 py-4 font-mono text-[0.9em] leading-relaxed;
+  background: #f5f7f3;
+  color: #2d3b23;
+  border: 2px solid #e3ead9;
+  white-space: pre;
+}
+.tiptap pre[data-wrap="true"],
+.tiptap .tt-code[data-wrap="true"],
+.tt-code-wrapper[data-wrap="true"] pre,
+.tt-code-wrapper[data-wrap="true"] .tt-code {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+.tiptap pre code,
+.tiptap .tt-code code {
+  @apply bg-transparent p-0 text-inherit;
+  border: 0;
+  color: inherit;
+  white-space: inherit !important;
+  word-break: inherit;
+  overflow-wrap: inherit;
+  display: block;
+}
+
+/* HR */
+.tiptap hr {
+  @apply my-6 h-0 border-0 border-t-2 border-dashed border-duo-border;
+}
+
+/* Placeholder */
+.tiptap p.is-editor-empty:first-child::before,
+.tiptap .is-editor-empty::before {
+  content: attr(data-placeholder);
+  color: #b9b9b9;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* Node pulse (focus from editor click) */
+@keyframes nodePulseRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(88, 204, 2, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 22px rgba(88, 204, 2, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(88, 204, 2, 0);
+  }
+}
+.node-pulse {
+  animation: nodePulseRing 1.2s ease-out 2;
+}
+
+/* Node link mark (Duolingo-style pill) */
+.tiptap .node-link,
+.node-link {
+  @apply inline-flex items-center gap-1 rounded-md border-b-2 border-duo-green bg-duo-green/15 px-1.5 py-0.5 font-extrabold text-duo-greenDark transition-colors;
+  cursor: pointer;
+}
+.tiptap .node-link:hover,
+.node-link:hover {
+  @apply bg-duo-green/25;
+}
+
+/* React Flow */
+.react-flow__attribution {
+  display: none !important;
+}
+.react-flow__background {
+  background-color: #fafafa !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+/* Selection */
+::selection {
+  background: rgba(88, 204, 2, 0.25);
+}
+
+/* Tippy (slash menu etc.) — strip default chrome, we style our own content */
+.tippy-box[data-theme~="light"],
+.tippy-box {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+.tippy-box > .tippy-arrow {
+  display: none !important;
+}
+.tippy-content {
+  padding: 0 !important;
+}

@@ -1,0 +1,17 @@
+   ▲ Next.js 15.5.15
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'D:\AI_Notes_Maker\.next\cache\webpack\client-production\0.pack_' -> 'D:\AI_Notes_Maker\.next\cache\webpack\client-production\0.pack'
+ ✓ Compiled successfully in 24.7s
+   Linting and checking validity of types ...
+   Collecting page data ...
+
+> Build error occurred
+[Error: ENOENT: no such file or directory, open 'D:\AI_Notes_Maker\.next\server\pages-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\AI_Notes_Maker\\.next\\server\\pages-manifest.json'
+}
+===EXIT=1===

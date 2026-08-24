@@ -8,23 +8,23 @@ import {
   FolderOpen,
   FolderPlus,
   FilePlus,
-  RefreshCw,
   Trash2,
   HardDriveDownload,
+  BookOpen,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFilesStore } from "@/lib/files-store";
-import type { FsEntry } from "@/lib/local-fs";
+import type { FsEntry, NoteFileContent } from "@/lib/local-fs";
 import { useNotesStore } from "@/lib/store";
+import { useStudyStore } from "@/lib/study-store";
 
 interface Props {
-  onOpenFile: (html: string, path: string) => void;
+  onOpenFile: (content: NoteFileContent, path: string) => void;
 }
 
 export default function FileExplorer({ onOpenFile }: Props) {
   const supported = useFilesStore((s) => s.supported);
   const root = useFilesStore((s) => s.root);
-  const rootName = useFilesStore((s) => s.rootName);
   const tree = useFilesStore((s) => s.tree);
   const openedPath = useFilesStore((s) => s.openedPath);
   const loading = useFilesStore((s) => s.loading);
@@ -32,11 +32,12 @@ export default function FileExplorer({ onOpenFile }: Props) {
 
   const init = useFilesStore((s) => s.init);
   const chooseRoot = useFilesStore((s) => s.chooseRoot);
-  const refresh = useFilesStore((s) => s.refresh);
   const openFile = useFilesStore((s) => s.openFile);
   const newFile = useFilesStore((s) => s.newFile);
   const newFolder = useFilesStore((s) => s.newFolder);
+  const syncStudyTopicsToFiles = useFilesStore((s) => s.syncStudyTopicsToFiles);
   const removeEntry = useFilesStore((s) => s.removeEntry);
+  const topics = useStudyStore((s) => s.topics);
 
   useEffect(() => {
     void init();
@@ -82,51 +83,25 @@ export default function FileExplorer({ onOpenFile }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between gap-1 border-b-2 border-duo-border bg-white px-3 py-2">
-        <div
-          className="flex min-w-0 items-center gap-1.5 truncate text-xs font-extrabold uppercase tracking-wide text-duo-ink"
-          title={rootName ?? ""}
+      <div className="flex items-center justify-between gap-2 border-b-2 border-duo-border px-3 py-2">
+        <div className="min-w-0">
+          <div className="truncate text-xs font-extrabold uppercase tracking-wide text-duo-ink">
+            Sark JSON
+          </div>
+          <div className="truncate text-[10px] font-bold uppercase tracking-wide text-gray-400">
+            {topics.length} study topics
+          </div>
+        </div>
+        <button
+          disabled={topics.length === 0 || loading}
+          onClick={() => void syncStudyTopicsToFiles(topics)}
+          title="Create folder hierarchy from Study topics"
+          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border-2 border-duo-border bg-white px-2 text-[10px] font-extrabold uppercase text-duo-ink hover:bg-duo-soft disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <FolderOpen size={14} className="shrink-0 text-duo-green" />
-          <span className="truncate">{rootName}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <IconBtn
-            title="New file"
-            onClick={async () => {
-              const name = window.prompt("File name (.md will be added)");
-              if (!name) return;
-              const p = await newFile("", name);
-              if (p) {
-                const html = await openFile(p);
-                if (html != null) onOpenFile(html, p);
-              }
-            }}
-          >
-            <FilePlus size={14} />
-          </IconBtn>
-          <IconBtn
-            title="New folder"
-            onClick={async () => {
-              const name = window.prompt("Folder name");
-              if (!name) return;
-              await newFolder("", name);
-            }}
-          >
-            <FolderPlus size={14} />
-          </IconBtn>
-          <IconBtn title="Refresh" onClick={() => void refresh()}>
-            <RefreshCw
-              size={14}
-              className={loading ? "animate-spin" : undefined}
-            />
-          </IconBtn>
-          <IconBtn title="Change folder" onClick={() => void chooseRoot()}>
-            <HardDriveDownload size={14} />
-          </IconBtn>
-        </div>
+          <BookOpen size={12} />
+          Sync topics
+        </button>
       </div>
-
       <div className="flex-1 overflow-auto py-2 text-sm">
         {tree.length === 0 && !loading && (
           <div className="px-4 py-6 text-center text-xs text-gray-400">
@@ -140,16 +115,16 @@ export default function FileExplorer({ onOpenFile }: Props) {
             depth={0}
             openedPath={openedPath}
             onOpenFile={async (path) => {
-              const html = await openFile(path);
-              if (html != null) onOpenFile(html, path);
+              const content = await openFile(path);
+              if (content != null) onOpenFile(content, path);
             }}
             onNewFile={async (dir) => {
               const name = window.prompt("File name (.md)");
               if (!name) return;
               const p = await newFile(dir, name);
               if (p) {
-                const html = await openFile(p);
-                if (html != null) onOpenFile(html, p);
+                const content = await openFile(p);
+                if (content != null) onOpenFile(content, p);
               }
             }}
             onNewFolder={async (dir) => {
@@ -170,26 +145,6 @@ export default function FileExplorer({ onOpenFile }: Props) {
         </div>
       )}
     </div>
-  );
-}
-
-function IconBtn({
-  children,
-  onClick,
-  title,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  title: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      className="flex h-7 w-7 items-center justify-center rounded-lg border-2 border-duo-border bg-white text-duo-ink hover:bg-duo-soft"
-    >
-      {children}
-    </button>
   );
 }
 

@@ -3,6 +3,7 @@
 import { nanoid } from "nanoid";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { StoredGraphNode } from "./local-fs";
 
 export type NodeContentType = "text" | "video-local" | "video-url";
 
@@ -41,6 +42,7 @@ interface NotesState {
   getNode: (id: string) => GraphNode | undefined;
   setHoveredLinkNode: (id: string | null) => void;
   focusNodeInGraph: (id: string) => void;
+  hydrateFromFile: (s: { editorHTML: string; nodes: StoredGraphNode[] }) => void;
   hydrateFromDrive: (s: { editorHTML: string; nodes: GraphNode[] }) => void;
   resetNotes: () => void;
 }
@@ -195,10 +197,20 @@ export const useNotesStore = create<NotesState>()(
         });
       },
 
+      hydrateFromFile: ({ editorHTML, nodes }) => {
+        set({
+          editorHTML,
+          nodes: normalizeGraphNodes(nodes),
+          selectedNodeId: null,
+          hoveredLinkNodeId: null,
+          focusSignal: null,
+        });
+      },
+
       hydrateFromDrive: ({ editorHTML, nodes }) => {
         set({
           editorHTML,
-          nodes,
+          nodes: normalizeGraphNodes(nodes),
           selectedNodeId: null,
           hoveredLinkNodeId: null,
           focusSignal: null,
@@ -218,6 +230,34 @@ export const useNotesStore = create<NotesState>()(
     }
   )
 );
+
+function normalizeGraphNodes(nodes: Array<Partial<GraphNode> | StoredGraphNode>): GraphNode[] {
+  return nodes.map((node) => ({
+    id: node.id ?? nanoid(8),
+    title: node.title ?? "Untitled node",
+    contentType:
+      node.contentType === "video-local" || node.contentType === "video-url"
+        ? node.contentType
+        : "text",
+    text: node.text,
+    rawText: node.rawText,
+    videoUrl: node.videoUrl,
+    videoFileName: node.videoFileName,
+    videoDataUrl: node.videoDataUrl,
+    videoLocalPath: node.videoLocalPath,
+    position: {
+      x:
+        typeof node.position?.x === "number" && Number.isFinite(node.position.x)
+          ? node.position.x
+          : 120,
+      y:
+        typeof node.position?.y === "number" && Number.isFinite(node.position.y)
+          ? node.position.y
+          : 80,
+    },
+    color: node.color ?? DUO_COLORS[0],
+  }));
+}
 
 export function clearLocalNotes() {
   useNotesStore.persist.clearStorage();

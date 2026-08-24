@@ -2,9 +2,9 @@
 
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import { FileText, Film, Link as LinkIcon } from "lucide-react";
-import { useMemo } from "react";
-import type { GraphNode } from "@/lib/store";
-import { HighlightJson, tryFormatJson } from "@/lib/json-highlight";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useNotesStore, type GraphNode } from "@/lib/store";
+import { JsonNodePreview, parseJsonPreview } from "@/lib/json-highlight";
 
 export type SquareNodeData = Pick<
   GraphNode,
@@ -17,17 +17,21 @@ export type SquareNodeData = Pick<
   | "videoFileName"
   | "videoLocalPath"
 > & {
+  editing?: boolean;
   hovered?: boolean;
   pulsing?: boolean;
+  stopEditing?: (id: string) => void;
 };
 
 export type SquareNodeType = Node<SquareNodeData, "square">;
 
 export default function SquareNode({
+  id,
   data,
   selected,
 }: NodeProps<SquareNodeType>) {
   const d = data;
+  const updateNode = useNotesStore((s) => s.updateNode);
   const Icon =
     d.contentType === "text"
       ? FileText
@@ -38,8 +42,89 @@ export default function SquareNode({
   const highlighted = !!d.hovered || !!d.pulsing;
   const raw = getNodeDisplayText(d);
   const hasText = raw.length > 0;
+  const [draft, setDraft] = useState(raw);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const json = useMemo(() => (hasText ? tryFormatJson(raw) : null), [raw, hasText]);
+  const json = useMemo(
+    () => (hasText ? parseJsonPreview(raw) : null),
+    [raw, hasText]
+  );
+
+  useEffect(() => {
+    if (!d.editing) setDraft(raw);
+  }, [d.editing, raw]);
+
+  useEffect(() => {
+    if (!d.editing) return;
+    setDraft(raw);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [d.editing, raw]);
+
+  const commitDraft = () => {
+    const trimmed = draft.trim();
+    const parsed = parseJsonPreview(trimmed);
+    const nextRaw = parsed?.formatted ?? draft;
+    updateNode(id, {
+      rawText: nextRaw,
+      text: nextRaw.trim() ? plainTextToHtml(nextRaw) : undefined,
+      contentType: "text",
+    });
+    d.stopEditing?.(id);
+  };
+
+  const handleEditorKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setDraft(raw);
+      d.stopEditing?.(id);
+      return;
+    }
+
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      commitDraft();
+    }
+  };
+
+  if (d.editing) {
+    return (
+      <div
+        className={`relative flex w-96 cursor-default flex-col rounded-2xl border-2 border-duo-green bg-white shadow-duoGreen ${
+          d.pulsing ? "node-pulse" : ""
+        }`}
+        onDoubleClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 border-b border-duo-border px-2.5 py-1.5">
+          <div
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white"
+            style={{ background: d.color }}
+          >
+            <Icon size={12} />
+          </div>
+          <div className="min-w-0 flex-1 truncate text-[11px] font-extrabold text-duo-ink">
+            {d.title}
+          </div>
+          <span className="rounded-md bg-duo-blue/15 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-duo-blue">
+            JSON
+          </span>
+        </div>
+        <textarea
+          ref={textareaRef}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commitDraft}
+          onKeyDown={handleEditorKeyDown}
+          onPointerDown={(event) => event.stopPropagation()}
+          placeholder={'{\n  "key": "value"\n}'}
+          className="nodrag nowheel min-h-40 resize-none rounded-b-2xl bg-[#f7f6f4] px-3 py-2 font-mono text-[11px] leading-tight text-duo-ink outline-none placeholder:text-gray-400"
+          spellCheck={false}
+        />
+
+        <Handle type="target" position={Position.Top} style={{ opacity: 0, pointerEvents: "none" }} />
+        <Handle type="source" position={Position.Bottom} style={{ opacity: 0, pointerEvents: "none" }} />
+      </div>
+    );
+  }
 
   if (!hasText) {
     return (
@@ -102,7 +187,7 @@ export default function SquareNode({
       </div>
       <div className="px-3 py-2">
         {json ? (
-          <HighlightJson json={json} />
+          <JsonNodePreview value={json.value} />
         ) : (
           <pre className="m-0 whitespace-pre-wrap break-words font-mono text-[11px] leading-tight text-duo-ink">
             {raw}
@@ -114,6 +199,29 @@ export default function SquareNode({
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0, pointerEvents: "none" }} />
     </div>
   );
+}
+
+function plainTextToHtml(raw: string): string | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+
+  return trimmed
+    .split(/\n{2,}/)
+    .map((paragraph) => {
+      const lineHtml = paragraph
+        .split(/\n/)
+        .map((line) => escapeHtml(line))
+        .join("<br>");
+      return `<p>${lineHtml || "<br>"}</p>`;
+    })
+    .join("");
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function getNodeDisplayText(data: SquareNodeData): string {

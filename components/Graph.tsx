@@ -3,7 +3,6 @@
 import {
   Background,
   Controls,
-  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   useNodesState,
@@ -68,7 +67,12 @@ function sameIds(a: string[], b: string[]): boolean {
 
 function toRFNode(
   n: ReturnType<typeof useNotesStore.getState>["nodes"][number],
-  extras: { hovered?: boolean; pulsing?: boolean } = {}
+  extras: {
+    editing?: boolean;
+    hovered?: boolean;
+    pulsing?: boolean;
+    stopEditing?: (id: string) => void;
+  } = {}
 ): RFNode {
   return {
     id: n.id,
@@ -83,8 +87,10 @@ function toRFNode(
       videoUrl: n.videoUrl,
       videoFileName: n.videoFileName,
       videoLocalPath: n.videoLocalPath,
+      editing: !!extras.editing,
       hovered: !!extras.hovered,
       pulsing: !!extras.pulsing,
+      stopEditing: extras.stopEditing,
     },
   };
 }
@@ -100,6 +106,7 @@ function GraphInner() {
   const focusSignal = useNotesStore((s) => s.focusSignal);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectedIdsRef = useRef<string[]>([]);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [boxSelectMode, setBoxSelectMode] = useState(false);
   // Locks a multi-selection so a stray node click doesn't shrink it.
   // Only pane-click, the explicit X button, batch-delete, or Esc clears it.
@@ -112,6 +119,12 @@ function GraphInner() {
 
   const lastSyncedRef = useRef<string>("");
   const [pulsingId, setPulsingId] = useState<string | null>(null);
+  const stopEditing = useCallback(
+    (id: string) => {
+      setEditingNodeId((current) => (current === id ? null : current));
+    },
+    []
+  );
 
   useEffect(() => {
     selectedIdsRef.current = selectedIds;
@@ -132,25 +145,44 @@ function GraphInner() {
       return storeNodes.map((sn) => {
         const existing = currentById.get(sn.id);
         return {
-          ...toRFNode(sn),
+          ...toRFNode(sn, {
+            editing: sn.id === editingNodeId,
+            stopEditing,
+          }),
           position: existing ? existing.position : sn.position,
         };
       });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storeNodes]);
+  }, [storeNodes, editingNodeId, stopEditing]);
 
   useEffect(() => {
     setRfNodes((cur) =>
       cur.map((n) => {
-        const prev = n.data as { hovered?: boolean; pulsing?: boolean };
+        const prev = n.data as {
+          editing?: boolean;
+          hovered?: boolean;
+          pulsing?: boolean;
+          stopEditing?: (id: string) => void;
+        };
+        const editing = n.id === editingNodeId;
         const hovered = n.id === hoveredId;
         const pulsing = n.id === pulsingId;
-        if (prev.hovered === hovered && prev.pulsing === pulsing) return n;
-        return { ...n, data: { ...prev, hovered, pulsing } };
+        if (
+          prev.editing === editing &&
+          prev.hovered === hovered &&
+          prev.pulsing === pulsing &&
+          prev.stopEditing === stopEditing
+        ) {
+          return n;
+        }
+        return {
+          ...n,
+          data: { ...prev, editing, hovered, pulsing, stopEditing },
+        };
       })
     );
-  }, [hoveredId, pulsingId, setRfNodes]);
+  }, [editingNodeId, hoveredId, pulsingId, setRfNodes, stopEditing]);
 
   const rf = useReactFlow();
 
@@ -300,6 +332,27 @@ function GraphInner() {
     [addNode, rf]
   );
 
+  const createEmptyJsonNodeAt = useCallback(
+    (clientX: number, clientY: number) => {
+      const flowPos = rf.screenToFlowPosition({ x: clientX, y: clientY });
+      const node = addNode({
+        title: "JSON node",
+        rawText: "",
+        text: undefined,
+        position: { x: flowPos.x - 192, y: flowPos.y - 90 },
+        contentType: "text",
+      });
+
+      allowClearRef.current = true;
+      lockedGroupRef.current = null;
+      setSelectedIds([]);
+      selectNode(null);
+      setEditingNodeId(node.id);
+      return node;
+    },
+    [addNode, rf, selectNode]
+  );
+
   useEffect(() => {
     const onDrop = (ev: Event) => {
       const detail = (ev as CustomEvent<LinkDragDropDetail>).detail;
@@ -378,6 +431,16 @@ function GraphInner() {
       ref={graphRef}
       onDragOver={handleNativeDragOver}
       onDrop={handleNativeDrop}
+      onDoubleClick={(event) => {
+        const target = event.target as HTMLElement | null;
+        if (
+          target?.closest(".react-flow__node") ||
+          target?.closest(".react-flow__controls")
+        ) {
+          return;
+        }
+        createEmptyJsonNodeAt(event.clientX, event.clientY);
+      }}
       className={`relative h-full w-full bg-[#fafafa] transition-all ${
         isDragging ? "ring-4 ring-inset ring-duo-green/40" : ""
       }`}
@@ -435,12 +498,16 @@ function GraphInner() {
           // shrink the selection.
           if (lockedGroupRef.current) return;
         }}
-        onNodeDoubleClick={() => selectNode(null)}
+        onNodeDoubleClick={(_event, node) => {
+          selectNode(null);
+          setEditingNodeId(node.id);
+        }}
         onPaneClick={() => {
           allowClearRef.current = true;
           lockedGroupRef.current = null;
           selectNode(null);
           setSelectedIds([]);
+          setEditingNodeId(null);
         }}
         fitView
         fitViewOptions={fitViewOptions}
@@ -449,7 +516,7 @@ function GraphInner() {
         panOnScroll
         zoomOnScroll={false}
         snapToGrid={false}
-        nodesDraggable={!isDragging}
+        nodesDraggable={!isDragging && editingNodeId === null}
         selectNodesOnDrag={false}
         multiSelectionKeyCode={multiKeyCodes}
         deleteKeyCode={deleteKeyCodes}
@@ -460,16 +527,6 @@ function GraphInner() {
         <Controls
           showInteractive={false}
           className="!rounded-2xl !border-2 !border-duo-border !bg-white !shadow-duo"
-        />
-        <MiniMap
-          pannable
-          zoomable
-          nodeColor={(n) => (n.data as { color?: string })?.color ?? "#58CC02"}
-          style={{
-            background: "white",
-            border: "2px solid #E5E5E5",
-            borderRadius: 16,
-          }}
         />
       </ReactFlow>
     </div>

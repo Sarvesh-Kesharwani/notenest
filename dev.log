@@ -1,0 +1,45 @@
+
+> ai-notes-maker@0.1.0 dev
+> next dev --turbo
+
+   ▲ Next.js 15.5.15 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.118:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1499ms
+ ○ Compiling / ...
+ ✓ Compiled / in 13.1s
+ GET / 200 in 15030ms
+ GET / 200 in 990ms
+ GET / 200 in 912ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 2.6s
+ GET /api/auth/session 200 in 4732ms
+ GET /api/auth/session 200 in 735ms
+ GET /api/auth/session 200 in 578ms
+ ✓ Compiled in 502ms
+ ✓ Compiled / in 43ms
+ GET / 200 in 417ms
+ GET / 200 in 539ms
+ ○ Compiling /icon.svg ...
+ ✓ Compiled /icon.svg in 560ms
+ GET /api/auth/session 200 in 695ms
+ GET /icon.svg?icon.978f7c32.svg 200 in 985ms
+ GET /api/auth/session 200 in 556ms
+ ✓ Compiled in 1135ms
+ GET / 200 in 1764ms
+ GET /icon.svg?icon.978f7c32.svg 200 in 954ms
+ GET /api/auth/session 200 in 954ms
+ GET /api/auth/session 200 in 659ms
+ ✓ Compiled in 606ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 7.3s
+ ✓ Compiled in 224ms
+ ✓ Compiled in 43ms
+ GET / 200 in 3061ms
+ GET /icon.svg?icon.978f7c32.svg 500 in 3979ms
+ GET /api/auth/session 200 in 4226ms
+ GET /api/auth/session 200 in 817ms
+ ✓ Compiled in 3.1s

@@ -178,6 +178,10 @@ export default function RichEditor({
   const initialValue = jsonBlocksOnly ? normalizeJsonCodeBlocks(value) : value;
   const lastExternal = useRef(initialValue);
   const pendingExternalSync = useRef(0);
+  const editorAttributes =
+    typeof editorProps?.attributes === "function"
+      ? undefined
+      : editorProps?.attributes;
 
   const editor = useEditor({
     extensions: [
@@ -236,14 +240,23 @@ export default function RichEditor({
       onChange(html);
     },
     editorProps: {
+      ...editorProps,
       attributes: {
+        ...editorAttributes,
         class: clsx(
           "tiptap",
           variant === "page" && "tiptap-page",
-          variant === "compact" && "tiptap-compact"
+          variant === "compact" && "tiptap-compact",
+          editorAttributes?.class
         ),
+        ...(jsonBlocksOnly
+          ? {
+              spellcheck: "false",
+              autocorrect: "off",
+              autocapitalize: "off",
+            }
+          : {}),
       },
-      ...editorProps,
     },
   });
 
@@ -361,6 +374,20 @@ export default function RichEditor({
               <Link2 size={14} />
             </BubbleIconBtn>
             {bubbleRightSlot?.(editor)}
+          </div>
+        </BubbleMenu>
+      )}
+
+      {jsonBlocksOnly && bubbleRightSlot && (
+        <BubbleMenu
+          editor={editor}
+          tippyOptions={{ duration: 120, placement: "top" }}
+          shouldShow={({ editor, from, to }) =>
+            from !== to && editor.isEditable
+          }
+        >
+          <div className="flex items-center gap-1 rounded-2xl border-2 border-duo-border bg-white p-1 shadow-duo">
+            {bubbleRightSlot(editor)}
           </div>
         </BubbleMenu>
       )}
